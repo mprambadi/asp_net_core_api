@@ -26,7 +26,7 @@ namespace core_api
             services.AddControllers();
             
             services.AddDbContext<BlogContext>(
-                options => options.UseSqlite("Data Source=blogging.db")
+                options => options.UseMySql("Data Source=blogging.db")
                 );
                 
             services.AddAuthentication(e => {
