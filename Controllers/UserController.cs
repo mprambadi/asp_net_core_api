@@ -1,3 +1,4 @@
+using System.IO;
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net;
@@ -48,11 +49,11 @@ namespace core_api.Controllers
         {
             var client = new HttpClient();
 
-            var user  = _context.Users.FirstOrDefault(e => e.id==id);
-            
-            if(user==null)
+            var user = _context.Users.FirstOrDefault(e => e.id == id);
+
+            if (user == null)
             {
-                return NotFound(new {status= HttpStatusCode.NotFound, message="User not found"});
+                return NotFound(new { status = HttpStatusCode.NotFound, message = "User not found" });
             }
 
             return Ok(user);
@@ -62,14 +63,15 @@ namespace core_api.Controllers
         [Route("hello")]
         public IActionResult AddUser()
         {
-            var userData = new User{
-                email="john@pantau.com",
-                profile="hello world",
-                username="johni", 
-                Posts= new List<Post>{ 
+            var userData = new User
+            {
+                email = "john@pantau.com",
+                profile = "hello world",
+                username = "johni",
+                Posts = new List<Post>{
                     new Post{title="hello world"}
                     }
-                };
+            };
 
             _context.Users.Add(userData);
             _context.SaveChanges();
@@ -89,23 +91,54 @@ namespace core_api.Controllers
         }
 
         [AllowAnonymous]
+        [HttpPost]
+        [Route("upload")]
+        public async Task<IActionResult> UploadImage()
+        {
+            var files = Request.Form.Files;
+            var folderPath = Path.Combine("Resource", "Images");
+            var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), folderPath);
+
+            if (files.Count > 0)
+            {
+                var dbPath = new List<string>();
+                foreach (var item in files)
+                {
+                    var fileName = $"{Guid.NewGuid()}{item.FileName}";
+                    var fullPath = Path.Combine(pathToSave, fileName);
+                    var savePath = Path.Combine(folderPath,fileName); 
+                    using (var stream = new FileStream(fullPath, FileMode.Create))
+                    {
+                        dbPath.Add(savePath);
+                        await item.CopyToAsync(stream);
+                    }
+
+                }
+                return Ok(dbPath);
+            }
+
+            return BadRequest();
+
+        }
+
+        [AllowAnonymous]
         [Route("login")]
         [HttpPost]
         public IActionResult Authenticate(User user)
         {
 
-            var _user = _context.Users.SingleOrDefault(e => e.id==user.id);
+            var _user = _context.Users.SingleOrDefault(e => e.id == user.id);
 
-            if(_user == null)
+            if (_user == null)
             {
-                 return BadRequest(new { message = "Username or password is incorrect" });
+                return BadRequest(new { message = "Username or password is incorrect" });
             }
 
             var tokenHandler = new JwtSecurityTokenHandler();
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(new Claim[] 
+                Subject = new ClaimsIdentity(new Claim[]
                 {
                     new Claim(ClaimTypes.Name, _user.id.ToString()),
                     new Claim(ClaimTypes.Email, _user.email),
@@ -114,13 +147,14 @@ namespace core_api.Controllers
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.ASCII.GetBytes("ini secret key nya coy")), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
-            var userNew = new {
-                    email = _user.email,
-                    id = _user.id,
-                    username = _user.username,
-                    token = tokenHandler.WriteToken(token)
-                }; 
-            
+            var userNew = new
+            {
+                email = _user.email,
+                id = _user.id,
+                username = _user.username,
+                token = tokenHandler.WriteToken(token)
+            };
+
             return Ok(userNew);
         }
 
