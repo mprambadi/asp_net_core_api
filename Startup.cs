@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -8,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using core_api.Database;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Http;
 
 namespace core_api
 {
@@ -57,6 +60,14 @@ namespace core_api
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseStaticFiles();
+            app.UseStaticFiles(
+                new StaticFileOptions(){
+                    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), @"Resource")),
+                    RequestPath = new PathString("/Resource")
+                }
+
+            );
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
